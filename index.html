@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>月底庫存盤點</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;min-height:100vh;}
+#app{display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto;background:#f5f5f5;}
+#hdr{background:#e85d04;color:#fff;padding:14px 16px 10px;flex-shrink:0;}
+#hdr h1{font-size:17px;font-weight:700;}
+#hdr p{font-size:12px;opacity:.85;margin-top:2px;}
+#main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;}
+#nav{display:flex;background:#fff;border-top:1px solid #ddd;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom);}
+.nb{flex:1;padding:10px 0;border:none;background:none;font-size:11px;color:#999;border-top:3px solid transparent;cursor:pointer;line-height:1.6;-webkit-appearance:none;}
+.nb.on{color:#e85d04;border-top-color:#e85d04;font-weight:700;}
+.mtabs{display:flex;background:#eee;border-radius:10px;padding:3px;margin-bottom:12px;}
+.mt{flex:1;padding:9px;border:none;border-radius:8px;font-size:14px;font-weight:700;background:none;color:#666;cursor:pointer;-webkit-appearance:none;}
+.mt.on{background:#e85d04;color:#fff;}
+.stabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.st{padding:6px 14px;border-radius:20px;border:none;background:#eee;color:#555;font-size:13px;cursor:pointer;-webkit-appearance:none;}
+.st.on{background:#e85d04;color:#fff;font-weight:700;}
+.card{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.ih{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px;}
+.iname{font-weight:600;font-size:15px;}
+.imeta{font-size:11px;color:#999;text-align:right;}
+.irow{display:flex;align-items:center;gap:8px;}
+.iwrap{flex:1;display:flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;}
+.iwrap input{flex:1;border:none;padding:10px;font-size:16px;outline:none;background:#fafafa;width:0;-webkit-appearance:none;}
+.isuf{padding:0 10px;background:#f0f0f0;color:#888;font-size:13px;display:flex;align-items:center;white-space:nowrap;}
+.iamt{min-width:72px;text-align:right;font-weight:700;font-size:15px;color:#ccc;}
+.iamt.on{color:#e85d04;}
+.stbar{background:#fff3e0;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;font-weight:700;font-size:14px;margin-top:6px;}
+.stbar span:last-child{color:#e85d04;}
+.savebtn{width:100%;margin-top:12px;padding:14px;background:#e85d04;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;-webkit-appearance:none;}
+.resetbtn{width:100%;margin-top:8px;padding:12px;background:#fff;color:#e85d04;border:2px solid #e85d04;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;-webkit-appearance:none;}
+.sumcard{background:#fff;border-radius:12px;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.sumhd{padding:10px 14px;font-weight:700;font-size:14px;}
+.sumrow{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f5f5f5;font-size:14px;}
+.sumrow span:last-child{font-weight:600;}
+.sumft{display:flex;justify-content:space-between;padding:10px 14px;font-weight:700;font-size:14px;}
+.grandbar{background:#e85d04;border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;color:#fff;font-weight:700;font-size:16px;margin-bottom:14px;}
+.expbtn{width:100%;padding:14px;background:#2e7d32;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;-webkit-appearance:none;}
+.mhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.mhdr span{font-weight:700;font-size:16px;}
+.abtn{padding:9px 16px;background:#e85d04;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;-webkit-appearance:none;}
+.slbl{font-size:12px;font-weight:700;color:#aaa;margin:12px 0 6px;}
+.mi{background:#fff;border-radius:10px;padding:11px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.miname{font-weight:600;font-size:14px;}
+.misub{font-size:12px;color:#999;margin-top:2px;}
+.mia{display:flex;gap:6px;flex-shrink:0;}
+.ebtn{padding:7px 11px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer;font-size:13px;-webkit-appearance:none;}
+.dbtn{padding:7px 9px;background:#fdecea;color:#c62828;border:none;border-radius:6px;cursor:pointer;font-size:13px;-webkit-appearance:none;}
+.fb{background:#fff7f0;border:2px solid #e85d04;border-radius:12px;padding:14px;margin-bottom:12px;}
+.ft{font-weight:700;color:#e85d04;margin-bottom:10px;font-size:14px;}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.ff label{font-size:12px;color:#888;display:block;margin-bottom:3px;}
+.ff input,.ff select{width:100%;border:1px solid #ddd;border-radius:8px;padding:9px 10px;font-size:14px;background:#fafafa;outline:none;-webkit-appearance:none;appearance:none;}
+.ff select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;}
+.fa{display:flex;gap:8px;}
+.sbtn{flex:1;padding:11px;background:#e85d04;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;-webkit-appearance:none;}
+.cbtn{flex:1;padding:11px;background:#eee;color:#555;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px;-webkit-appearance:none;}
+.empty{text-align:center;color:#bbb;padding:50px 20px;font-size:14px;line-height:2.2;}
+.loading{text-align:center;color:#aaa;padding:50px 20px;font-size:14px;}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:10px 22px;border-radius:22px;font-size:14px;z-index:999;display:none;white-space:nowrap;}
+.syncbar{background:#e3f2fd;border-radius:8px;padding:8px 12px;font-size:12px;color:#1565c0;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.syncbar button{background:none;border:none;color:#e85d04;font-size:12px;font-weight:700;cursor:pointer;padding:0;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hdr">
+    <h1>&#128203; 月底庫存盤點</h1>
+    <p>目前總金額：<span id="htotal">$0</span></p>
+  </div>
+  <div id="main"><div class="loading">載入中...</div></div>
+  <div id="nav">
+    <button class="nb on" id="nb0">&#9997;&#65039;<br>盤點</button>
+    <button class="nb" id="nb1">&#128193;<br>品項管理</button>
+    <button class="nb" id="nb2">&#128202;<br>彙總</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var API = "https://script.google.com/macros/s/AKfycbye2LiqIpQw5muGMPTGkP8Sq64tnUPZadIc63kSt1itXE-AF_-GnHRFqqaXKcupEME1Fw/exec";
+var CU = ["包","袋","箱","瓶","罐"];
+var AU = ["公斤","斤","兩","克","包","袋","箱","瓶","罐"];
+var CATS = {"食材":["蔬菜","火鍋料","醬料","飲料"],"非食材":["包材","雜貨","清潔用品"]};
+var MAINS = ["食材","非食材"];
+var DEFS = [
+  {id:1,mc:"食材",sc:"蔬菜",name:"高麗菜",price:30,unit:"斤",kpu:""},
+  {id:2,mc:"食材",sc:"蔬菜",name:"青蔥",price:50,unit:"斤",kpu:""},
+  {id:3,mc:"食材",sc:"火鍋料",name:"魚板",price:120,unit:"包",kpu:"0.3"},
+  {id:4,mc:"食材",sc:"火鍋料",name:"貢丸",price:90,unit:"包",kpu:"0.3"},
+  {id:5,mc:"食材",sc:"醬料",name:"沙茶醬",price:80,unit:"罐",kpu:"0.25"},
+  {id:6,mc:"食材",sc:"飲料",name:"可樂",price:20,unit:"瓶",kpu:"0.6"},
+  {id:7,mc:"非食材",sc:"包材",name:"打包盒",price:150,unit:"包",kpu:"0.5"},
+  {id:8,mc:"非食材",sc:"雜貨",name:"牙籤",price:25,unit:"包",kpu:"0.05"},
+  {id:9,mc:"非食材",sc:"清潔用品",name:"洗碗精",price:60,unit:"瓶",kpu:"1"}
+];
+
+var items = [], counts = {}, pg = 0, aM = "食材", aS = "蔬菜", eid = -1, snew = false, lastSync = "";
+
+function kr(u,k){ if(u=="公斤")return 1; if(u=="斤")return 0.6; if(u=="兩")return 0.0375; if(u=="克")return 0.001; return parseFloat(k)||0; }
+function ca(it,kg){ var k=parseFloat(kg); if(!k||k<=0)return 0; var r=kr(it.unit,it.kpu); return r==0?0:(k/r)*parseFloat(it.price||0); }
+function fmt(n){ return "$"+Math.round(n).toLocaleString(); }
+function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function gtt(){ return items.reduce(function(s,i){ return s+ca(i,counts[i.id]||0); },0); }
+
+function toast(m){
+  var t=document.getElementById("toast");
+  t.textContent=m; t.style.display="block";
+  setTimeout(function(){ t.style.display="none"; },2500);
+}
+
+function lsGet(k,def){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+
+function init(){
+  // Load local first so screen shows immediately
+  items = lsGet("inv_items", JSON.parse(JSON.stringify(DEFS)));
+  counts = lsGet("inv_counts", {});
+  render();
+  // Then sync from cloud
+  cloudLoad();
+
+  document.getElementById("nb0").addEventListener("click",function(){ gp(0); });
+  document.getElementById("nb1").addEventListener("click",function(){ gp(1); });
+  document.getElementById("nb2").addEventListener("click",function(){ gp(2); });
+}
+
+function gp(p){ pg=p; for(var i=0;i<3;i++){ document.getElementById("nb"+i).className="nb"+(i==p?" on":""); } render(); }
+
+function render(){
+  document.getElementById("htotal").textContent=fmt(gtt());
+  var el=document.getElementById("main");
+  if(pg==0) el.innerHTML=bCount();
+  else if(pg==1) el.innerHTML=bManage();
+  else el.innerHTML=bSum();
+  bind();
+}
+
+/* ── Cloud ── */
+function cloudLoad(){
+  fetch(API+"?action=getItems&t="+Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d&&d.length){ items=d.map(function(r){ return {id:Number(r.id),mc:r.mc,sc:r.sc,name:r.name,price:r.price,unit:r.unit,kpu:r.kpu}; }); lsSet("inv_items",items); }
+      return fetch(API+"?action=getCounts&t="+Date.now());
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d&&d.length){ counts={}; d.forEach(function(r){ if(r.id) counts[Number(r.id)]=r.kg; }); lsSet("inv_counts",counts); }
+      lastSync=new Date().toLocaleTimeString("zh-TW");
+      render();
+    })
+    .catch(function(){ toast("⚠️ 雲端載入失敗，使用本機資料"); });
+}
+
+function cloudSaveCounts(cb){
+  var rows=Object.keys(counts).map(function(id){ return {id:id,kg:counts[id]}; });
+  fetch(API,{method:"POST",mode:"no-cors",body:JSON.stringify({action:"saveCounts",rows:rows})})
+    .then(function(){ toast("✅ 已儲存並同步"); lastSync=new Date().toLocaleTimeString("zh-TW"); if(cb)cb(); })
+    .catch(function(){ toast("❌ 同步失敗，已存本機"); });
+}
+
+function cloudSaveItems(){
+  fetch(API,{method:"POST",mode:"no-cors",body:JSON.stringify({action:"saveItems",rows:items})})
+    .then(function(){ toast("✅ 品項已同步"); lsSet("inv_items",items); })
+    .catch(function(){ toast("❌ 品項同步失敗"); });
+}
+
+/* ── Build Pages ── */
+function syncBar(){
+  return '<div class="syncbar"><span>上次同步：'+(lastSync||"載入中...")+'</span><button id="rfbtn">重新載入</button></div>';
+}
+
+function bCount(){
+  var sub=items.filter(function(i){ return i.mc==aM&&i.sc==aS; });
+  var sT=sub.reduce(function(s,i){ return s+ca(i,counts[i.id]||0); },0);
+  var h=syncBar();
+  h+='<div class="mtabs">';
+  for(var i=0;i<MAINS.length;i++){ var m=MAINS[i]; h+='<button class="mt'+(m==aM?" on":"")+'" data-m="'+m+'">'+m+'</button>'; }
+  h+='</div><div class="stabs">';
+  var ss=CATS[aM]; for(var i=0;i<ss.length;i++){ var s=ss[i]; h+='<button class="st'+(s==aS?" on":"")+'" data-s="'+esc(s)+'">'+s+'</button>'; }
+  h+='</div>';
+  if(!sub.length){ h+='<div class="empty">此分類尚無品項<br>請至品項管理新增</div>'; }
+  else {
+    for(var i=0;i<sub.length;i++){
+      var it=sub[i]; var kg=counts[it.id]||""; var amt=ca(it,kg);
+      var meta=it.price+"元/"+it.unit+(CU.indexOf(it.unit)>=0&&it.kpu?" (1"+it.unit+"="+it.kpu+"kg)":"");
+      h+='<div class="card"><div class="ih"><span class="iname">'+esc(it.name)+'</span><span class="imeta">'+esc(meta)+'</span></div>';
+      h+='<div class="irow"><div class="iwrap"><input type="number" min="0" step="0.01" inputmode="decimal" value="'+esc(kg)+'" placeholder="輸入公斤數" data-id="'+it.id+'"><span class="isuf">公斤</span></div>';
+      h+='<div class="iamt'+(amt>0?" on":"")+'" id="a'+it.id+'">'+(amt>0?fmt(amt):"—")+'</div></div></div>';
+    }
+  }
+  h+='<div class="stbar"><span>'+esc(aS)+' 小計</span><span id="stv">'+fmt(sT)+'</span></div>';
+  h+='<button class="savebtn" id="svbtn">💾 儲存並同步</button>';
+  h+='<button class="resetbtn" id="rstbtn">🔄 重置本月盤點數量</button>';
+  return h;
+}
+
+function bManage(){
+  var h='<div class="mhdr"><span>品項管理</span><button class="abtn" id="anew">＋ 新增</button></div>';
+  if(snew) h+=bForm({mc:"食材",sc:"蔬菜",name:"",price:"",unit:"公斤",kpu:""},"nw");
+  for(var mi=0;mi<MAINS.length;mi++){
+    var main=MAINS[mi]; var ms=CATS[main];
+    for(var si=0;si<ms.length;si++){
+      var sc=ms[si];
+      var list=items.filter(function(it){ return it.mc==main&&it.sc==sc; });
+      if(!list.length) continue;
+      h+='<div class="slbl">'+main+' › '+sc+'</div>';
+      for(var ii=0;ii<list.length;ii++){
+        var it=list[ii];
+        if(eid==it.id){ h+=bForm(it,"ed"); continue; }
+        var s2=CU.indexOf(it.unit)>=0&&it.kpu?" (1"+it.unit+"="+it.kpu+"kg)":"";
+        h+='<div class="mi"><div><div class="miname">'+esc(it.name)+'</div><div class="misub">'+esc(it.price)+'元/'+esc(it.unit)+esc(s2)+'</div></div>';
+        h+='<div class="mia"><button class="ebtn" data-eid="'+it.id+'">編輯</button><button class="dbtn" data-did="'+it.id+'">刪除</button></div></div>';
+      }
+    }
+  }
+  return h;
+}
+
+function bForm(it,p){
+  var isCU=CU.indexOf(it.unit)>=0; var mc=it.mc||"食材";
+  var h='<div class="fb"><div class="ft">'+(p=="nw"?"新增品項":"編輯品項")+'</div><div class="fg">';
+  h+='<div class="ff"><label>主類別</label><select id="'+p+'mc">';
+  for(var i=0;i<MAINS.length;i++){ var m=MAINS[i]; h+='<option value="'+m+'"'+(m==mc?" selected":"")+'>'+m+'</option>'; }
+  h+='</select></div>';
+  h+='<div class="ff"><label>分類</label><select id="'+p+'sc">';
+  var cs=CATS[mc]; for(var i=0;i<cs.length;i++){ var s=cs[i]; h+='<option value="'+s+'"'+(s==it.sc?" selected":"")+'>'+s+'</option>'; }
+  h+='</select></div>';
+  h+='<div class="ff"><label>品名</label><input id="'+p+'nm" type="text" value="'+esc(it.name||"")+'" placeholder="品名"></div>';
+  h+='<div class="ff"><label>單價（元/單位）</label><input id="'+p+'pr" type="number" inputmode="decimal" value="'+esc(it.price||"")+'" placeholder="100"></div>';
+  h+='<div class="ff"><label>原包裝單位</label><select id="'+p+'ut">';
+  for(var i=0;i<AU.length;i++){ var u=AU[i]; h+='<option value="'+u+'"'+(u==it.unit?" selected":"")+'>'+u+'</option>'; }
+  h+='</select></div>';
+  h+='<div class="ff" id="'+p+'kw" style="'+(isCU?"":"display:none")+'"><label id="'+p+'kl">每'+(it.unit||"包")+'等於幾公斤</label>';
+  h+='<input id="'+p+'kp" type="number" inputmode="decimal" value="'+esc(it.kpu||"")+'" placeholder="0.3"></div>';
+  h+='</div><div class="fa"><button class="sbtn" id="'+p+'sv">儲存</button><button class="cbtn" id="'+p+'cn">取消</button></div></div>';
+  return h;
+}
+
+function fget(p){
+  return {
+    mc:(document.getElementById(p+"mc")||{value:"食材"}).value,
+    sc:(document.getElementById(p+"sc")||{value:""}).value,
+    name:((document.getElementById(p+"nm")||{value:""}).value||"").trim(),
+    price:(document.getElementById(p+"pr")||{value:"0"}).value,
+    unit:(document.getElementById(p+"ut")||{value:"公斤"}).value,
+    kpu:(document.getElementById(p+"kp")||{value:""}).value
+  };
+}
+
+function bSum(){
+  var total=0;
+  var h='<div style="font-weight:700;font-size:16px;margin-bottom:14px;">盤點彙總</div>';
+  for(var mi=0;mi<MAINS.length;mi++){
+    var main=MAINS[mi]; var bg=main=="食材"?"#fff3e0":"#e8f5e9"; var mT=0; var rows="";
+    var ms=CATS[main];
+    for(var si=0;si<ms.length;si++){
+      var sc=ms[si];
+      var t=items.filter(function(it){ return it.mc==main&&it.sc==sc; }).reduce(function(s,it){ return s+ca(it,counts[it.id]||0); },0);
+      mT+=t; rows+='<div class="sumrow"><span>'+sc+'</span><span>'+fmt(t)+'</span></div>';
+    }
+    total+=mT;
+    h+='<div class="sumcard"><div class="sumhd" style="background:'+bg+'">'+(main=="食材"?"🥬":"📦")+' '+main+'</div>'+rows;
+    h+='<div class="sumft" style="background:'+bg+'"><span>'+main+' 小計</span><span style="color:#e85d04">'+fmt(mT)+'</span></div></div>';
+  }
+  h+='<div class="grandbar"><span>🏷️ 庫存總金額</span><span>'+fmt(total)+'</span></div>';
+  h+='<button class="expbtn" id="expbtn">⬇️ 匯出 Excel (CSV)</button>';
+  return h;
+}
+
+/* ── Bind ── */
+function bind(){
+  var el=document.getElementById("main");
+
+  var rf=document.getElementById("rfbtn");
+  if(rf) rf.addEventListener("click",function(){ cloudLoad(); });
+
+  el.querySelectorAll(".mt").forEach(function(b){ b.addEventListener("click",function(){ aM=this.getAttribute("data-m"); aS=CATS[aM][0]; render(); }); });
+  el.querySelectorAll(".st").forEach(function(b){ b.addEventListener("click",function(){ aS=this.getAttribute("data-s"); render(); }); });
+
+  el.querySelectorAll("input[data-id]").forEach(function(inp){
+    inp.addEventListener("input",function(){
+      var id=parseInt(this.getAttribute("data-id")); counts[id]=this.value;
+      lsSet("inv_counts",counts);
+      document.getElementById("htotal").textContent=fmt(gtt());
+      var it=null; for(var i=0;i<items.length;i++){ if(items[i].id==id){it=items[i];break;} }
+      if(it){ var ae=document.getElementById("a"+id); if(ae){ var amt=ca(it,this.value); ae.textContent=amt>0?fmt(amt):"—"; ae.className="iamt"+(amt>0?" on":""); } }
+      var sv=items.filter(function(i){ return i.mc==aM&&i.sc==aS; }).reduce(function(s,i){ return s+ca(i,counts[i.id]||0); },0);
+      var se=document.getElementById("stv"); if(se) se.textContent=fmt(sv);
+    });
+  });
+
+  var svb=document.getElementById("svbtn");
+  if(svb) svb.addEventListener("click",function(){ lsSet("inv_counts",counts); cloudSaveCounts(null); });
+
+  var rstb=document.getElementById("rstbtn");
+  if(rstb) rstb.addEventListener("click",function(){
+    if(confirm("確定要重置本月所有盤點數量？")){ counts={}; lsSet("inv_counts",{}); cloudSaveCounts(function(){ render(); }); }
+  });
+
+  var an=document.getElementById("anew");
+  if(an) an.addEventListener("click",function(){ snew=true; render(); });
+
+  el.querySelectorAll(".ebtn").forEach(function(b){ b.addEventListener("click",function(){ eid=parseInt(this.getAttribute("data-eid")); render(); }); });
+  el.querySelectorAll(".dbtn").forEach(function(b){
+    b.addEventListener("click",function(){
+      if(confirm("確定刪除此品項？")){
+        var id=parseInt(this.getAttribute("data-did"));
+        items=items.filter(function(i){ return i.id!=id; }); delete counts[id];
+        lsSet("inv_items",items); lsSet("inv_counts",counts); cloudSaveItems(); render();
+      }
+    });
+  });
+
+  ["nw","ed"].forEach(function(p){
+    var ut=document.getElementById(p+"ut");
+    if(ut) ut.addEventListener("change",function(){
+      var w=document.getElementById(p+"kw"); var l=document.getElementById(p+"kl");
+      if(w) w.style.display=CU.indexOf(this.value)>=0?"":"none";
+      if(l) l.textContent="每"+this.value+"等於幾公斤";
+    });
+    var mc=document.getElementById(p+"mc");
+    if(mc) mc.addEventListener("change",function(){
+      var sc=document.getElementById(p+"sc"); if(!sc) return;
+      sc.innerHTML=""; var cs=CATS[this.value];
+      for(var i=0;i<cs.length;i++){ var o=document.createElement("option"); o.value=cs[i]; o.text=cs[i]; sc.appendChild(o); }
+    });
+    var sv=document.getElementById(p+"sv");
+    if(sv) sv.addEventListener("click",function(){
+      var f=fget(p); if(!f.name){ alert("請輸入品名"); return; }
+      if(p=="nw"){ items.push({id:Date.now(),mc:f.mc,sc:f.sc,name:f.name,price:f.price,unit:f.unit,kpu:f.kpu}); snew=false; }
+      else { items=items.map(function(i){ return i.id==eid?{id:eid,mc:f.mc,sc:f.sc,name:f.name,price:f.price,unit:f.unit,kpu:f.kpu}:i; }); eid=-1; }
+      lsSet("inv_items",items); cloudSaveItems(); render();
+    });
+    var cn=document.getElementById(p+"cn");
+    if(cn) cn.addEventListener("click",function(){ if(p=="nw") snew=false; else eid=-1; render(); });
+  });
+
+  var ex=document.getElementById("expbtn");
+  if(ex) ex.addEventListener("click",expCSV);
+}
+
+/* ── Export ── */
+function expCSV(){
+  var rows=[["類別","分類","品名","原包裝單位","單價(元)","盤點數量(公斤)","庫存金額(元)"]];
+  for(var mi=0;mi<MAINS.length;mi++){
+    var main=MAINS[mi]; var mT=0; var ms=CATS[main];
+    for(var si=0;si<ms.length;si++){
+      var sc=ms[si]; var sT=0;
+      var list=items.filter(function(it){ return it.mc==main&&it.sc==sc; });
+      for(var ii=0;ii<list.length;ii++){
+        var it=list[ii]; var a=Math.round(ca(it,counts[it.id]||0)); sT+=a; mT+=a;
+        rows.push([main,sc,it.name,it.unit,it.price,parseFloat(counts[it.id])||0,a]);
+      }
+      rows.push(["","","【"+sc+" 小計】","","","",sT]);
+    }
+    rows.push(["","","【"+main+" 小計】","","","",mT]);
+  }
+  rows.push(["","","【庫存總金額】","","","",Math.round(gtt())]);
+  var csv=rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(","); }).join("\n");
+  var blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a"); a.href=url; a.download="庫存盤點_"+new Date().toISOString().slice(0,10)+".csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+init();
+</script>
+</body>
+</html>
